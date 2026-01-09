@@ -1,0 +1,12 @@
+{
+  "cv_business_score": -53282.666666666664,
+  "cv_auc": 0.7653864468855284,
+  "cv_threshold": 0.08333333333333333,
+  "holdout_auc": 0.7675430015841551,
+  "holdout_cost": 32038.0,
+  "holdout_threshold": 0.09,
+  "final_threshold": 0.09,
+  "n_samples": 307511,
+  "n_features": 188,
+  "default_rate": 0.08072881945686496
+}
