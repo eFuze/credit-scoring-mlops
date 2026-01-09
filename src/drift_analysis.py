@@ -60,15 +60,12 @@ def generate_drift_report(
     """
     try:
         from evidently.report import Report
-        from evidently.metric_preset import DataDriftPreset, DataQualityPreset
-        from evidently.metrics import (
-            DataDriftTable,
-            DatasetDriftMetric,
-            ColumnDriftMetric
-        )
-    except ImportError:
+        from evidently.metric_preset import DataDriftPreset
+        from evidently.metrics import DatasetDriftMetric, DataDriftTable
+    except ImportError as e:
+        print(f"Erreur d'import: {e}")
         raise ImportError(
-            "Evidently n'est pas installé. "
+            "Evidently n'est pas installé correctement. "
             "Installez-le avec: pip install evidently"
         )
 
@@ -201,6 +198,16 @@ def main():
     print("ANALYSE DU DATA DRIFT AVEC EVIDENTLY")
     print("=" * 60)
 
+    # Test import evidently
+    try:
+        from evidently.report import Report
+        from evidently.metric_preset import DataDriftPreset
+        print("Evidently importé avec succès")
+    except ImportError as e:
+        print(f"\nErreur d'import Evidently: {e}")
+        print("Installez evidently: pip install evidently")
+        return
+
     try:
         # Charger les données
         print("\nChargement des données...")
@@ -211,35 +218,40 @@ def main():
         # Top features
         top_features = get_top_features(20)
 
-        # Générer le rapport
-        print("\nGénération du rapport de drift...")
-        results = generate_drift_report(
-            X_train, X_test,
-            output_path=DATA_DIR / "drift_report.html",
-            top_features=top_features
-        )
+        if top_features:
+            print(f"  Top features: {len(top_features)}")
+            common = [c for c in top_features if c in X_train.columns and c in X_test.columns]
+            X_train_subset = X_train[common].copy()
+            X_test_subset = X_test[common].copy()
+        else:
+            cols = list(set(X_train.columns) & set(X_test.columns))[:30]
+            X_train_subset = X_train[cols].copy()
+            X_test_subset = X_test[cols].copy()
 
-        # Afficher les résultats
-        print("\n" + "=" * 60)
-        print("RÉSULTATS")
+        print(f"\nGénération du rapport de drift sur {X_train_subset.shape[1]} features...")
+
+        # Créer le rapport
+        report = Report(metrics=[DataDriftPreset()])
+        report.run(reference_data=X_train_subset, current_data=X_test_subset)
+
+        # Sauvegarder
+        output_path = DATA_DIR / "drift_report.html"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        report.save_html(str(output_path))
+
+        print(f"\n" + "=" * 60)
+        print("RAPPORT GÉNÉRÉ AVEC SUCCÈS")
         print("=" * 60)
-        print(f"Features analysées: {results['n_features_analyzed']}")
-        print(f"Features avec drift: {results['n_drifted_features']}")
-        print(f"Taux de drift: {results['drift_share']:.1%}")
-        print(f"Dataset drift détecté: {'OUI' if results['dataset_drift'] else 'NON'}")
-
-        # Vérifier le seuil
-        check_drift_threshold(results['drift_share'])
-
-        print(f"\nOuvrez le rapport HTML pour plus de détails:")
-        print(f"  {DATA_DIR / 'drift_report.html'}")
+        print(f"\nOuvrez le rapport HTML:")
+        print(f"  {output_path}")
 
     except FileNotFoundError as e:
         print(f"\nErreur: {e}")
         print("Exécutez d'abord: python -m src.train")
-    except ImportError as e:
+    except Exception as e:
         print(f"\nErreur: {e}")
-        print("Installez evidently: pip install evidently")
+        import traceback
+        traceback.print_exc()
 
 
 if __name__ == "__main__":
