@@ -1,0 +1,30 @@
+# Configuration Render pour le déploiement automatique
+# Documentation: https://render.com/docs/blueprint-spec
+
+services:
+  # API de scoring crédit
+  - type: web
+    name: credit-scoring-api
+    env: python
+    region: frankfurt  # ou oregon pour US
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.10.12"
+    healthCheckPath: /health
+    autoDeploy: true
+
+  # Dashboard Streamlit (optionnel)
+  - type: web
+    name: credit-scoring-dashboard
+    env: python
+    region: frankfurt
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run dashboard/app.py --server.port $PORT --server.address 0.0.0.0
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.10.12"
+    autoDeploy: true
