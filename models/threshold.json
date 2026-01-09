@@ -1,0 +1,5 @@
+{
+  "threshold": 0.09,
+  "fn_cost": 10.0,
+  "fp_cost": 1.0
+}
