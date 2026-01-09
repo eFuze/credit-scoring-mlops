@@ -1,6 +1,40 @@
-*.csv 
-*.pkl 
-data/ 
-models/*.pkl 
-__pycache__/ 
-.ipynb_checkpoints/ 
+# Data
+*.csv
+*.parquet
+data/raw/
+data/processed/
+
+# Models
+models/*.joblib
+models/*.pkl
+models/*.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# MLflow
+mlflow.db
+mlruns/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Env
+.env
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
