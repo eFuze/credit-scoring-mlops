@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rapport de Data Drift - Projet Scoring Crédit</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header .subtitle { opacity: 0.8; font-size: 1.2em; }
+        .header .date { margin-top: 15px; opacity: 0.6; }
+
+        .student-info {
+            background: #f8f9fa;
+            padding: 20px 40px;
+            border-bottom: 3px solid #667eea;
+        }
+        .student-info p { margin: 5px 0; color: #555; }
+
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            padding: 40px;
+            background: #f8f9fa;
+        }
+        .summary-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        .summary-card:hover { transform: translateY(-5px); }
+        .summary-card .number {
+            font-size: 3em;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .summary-card .label { color: #666; margin-top: 10px; }
+
+        .section { padding: 40px; }
+        .section h2 {
+            color: #1a1a2e;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .methodology {
+            background: #e8f4f8;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border-left: 5px solid #667eea;
+        }
+        .methodology h3 { color: #1a1a2e; margin-bottom: 15px; }
+        .methodology ul { margin-left: 20px; }
+        .methodology li { margin: 8px 0; color: #555; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        th {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+        td { padding: 12px 15px; border-bottom: 1px solid #eee; }
+        tr:hover { background: #f8f9fa; }
+
+        .drift-yes {
+            background: #ffe6e6;
+            color: #d32f2f;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        .drift-no {
+            background: #e6ffe6;
+            color: #2e7d32;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .interpretation {
+            background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
+            padding: 25px;
+            border-radius: 10px;
+            margin-top: 30px;
+            border-left: 5px solid #ffc107;
+        }
+        .interpretation h3 { color: #856404; margin-bottom: 15px; }
+
+        .conclusion {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        .conclusion h2 { margin-bottom: 20px; }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Rapport de Data Drift</h1>
+            <p class="subtitle">Analyse de la dérive des données en production</p>
+            <p class="date">Généré le 11/01/2026 à 09:17</p>
+        </div>
+
+        <div class="student-info">
+            <p><strong>Projet :</strong> Implémentez un modèle de scoring - OpenClassrooms</p>
+            <p><strong>Contexte :</strong> Modèle de scoring crédit pour "Prêt à dépenser"</p>
+            <p><strong>Outil utilisé :</strong> Evidently AI - Bibliothèque de monitoring ML</p>
+        </div>
+
+        <div class="summary">
+            <div class="summary-card">
+                <div class="number">20</div>
+                <div class="label">Features analysées</div>
+            </div>
+            <div class="summary-card">
+                <div class="number">4</div>
+                <div class="label">Features avec drift</div>
+            </div>
+            <div class="summary-card">
+                <div class="number">20.0%</div>
+                <div class="label">Taux de dérive</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>1. Méthodologie</h2>
+            <div class="methodology">
+                <h3>Qu'est-ce que le Data Drift ?</h3>
+                <p>Le <strong>data drift</strong> (dérive des données) se produit lorsque la distribution des données en production diffère significativement de celle des données d'entraînement. Cela peut dégrader les performances du modèle.</p>
+                <br>
+                <h3>Test statistique utilisé</h3>
+                <ul>
+                    <li><strong>Distance de Wasserstein</strong> : Mesure la "distance" entre deux distributions de probabilité</li>
+                    <li><strong>Seuil de détection</strong> : Un drift est détecté si le p-value < 0.05</li>
+                    <li><strong>Données de référence</strong> : Échantillon des données d'entraînement (2000 observations)</li>
+                    <li><strong>Données courantes</strong> : Données simulant la production (2000 observations)</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>2. Résultats détaillés par feature</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>Moyenne (Réf.)</th>
+                        <th>Moyenne (Prod.)</th>
+                        <th>Écart-type (Réf.)</th>
+                        <th>Drift Score</th>
+                        <th>Drift Détecté</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>EXT_SOURCE_2</strong></td>
+                        <td>0.2834</td>
+                        <td>0.3608</td>
+                        <td>0.1549</td>
+                        <td>0.5000</td>
+                        <td><span class="drift-yes">OUI</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>EXT_SOURCE_PROD</strong></td>
+                        <td>0.2793</td>
+                        <td>0.3572</td>
+                        <td>0.1558</td>
+                        <td>0.5000</td>
+                        <td><span class="drift-yes">OUI</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>AMT_CREDIT</strong></td>
+                        <td>51786.9436</td>
+                        <td>65874.2967</td>
+                        <td>28174.7062</td>
+                        <td>0.5000</td>
+                        <td><span class="drift-yes">OUI</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>AMT_ANNUITY</strong></td>
+                        <td>51773.4100</td>
+                        <td>66011.1021</td>
+                        <td>28475.3842</td>
+                        <td>0.5000</td>
+                        <td><span class="drift-yes">OUI</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>EXT_SOURCE_MEAN</strong></td>
+                        <td>0.2903</td>
+                        <td>0.2903</td>
+                        <td>0.1590</td>
+                        <td>0.0000</td>
+                        <td><span class="drift-no">NON</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>EXT_SOURCE_1</strong></td>
+                        <td>0.2906</td>
+                        <td>0.2906</td>
+                        <td>0.1585</td>
+                        <td>0.0000</td>
+                        <td><span class="drift-no">NON</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>EXT_SOURCE_STD</strong></td>
+                        <td>0.2825</td>
+                        <td>0.2825</td>
+                        <td>0.1577</td>
+                        <td>0.0000</td>
+                        <td><span class="drift-no">NON</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>EXT_SOURCE_3</strong></td>
+                        <td>0.2797</td>
+                        <td>0.2797</td>
+                        <td>0.1560</td>
+                        <td>0.0000</td>
+                        <td><span class="drift-no">NON</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>AMT_REQ_CREDIT_BUREAU_YEAR</strong></td>
+                        <td>51453.1978</td>
+                        <td>51453.1978</td>
+                        <td>26864.7998</td>
+                        <td>0.0000</td>
+                        <td><span class="drift-no">NON</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>AMT_REQ_CREDIT_BUREAU_MON</strong></td>
+                        <td>50309.7767</td>
+                        <td>50309.7767</td>
+                        <td>27567.3652</td>
+                        <td>0.0000</td>
+                        <td><span class="drift-no">NON</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>AMT_REQ_CREDIT_BUREAU_WEEK</strong></td>
+                        <td>51307.2076</td>
+                        <td>51307.2076</td>
+                        <td>27411.9631</td>
+                        <td>0.0000</td>
+                        <td><span class="drift-no">NON</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>DAYS_EMPLOYED</strong></td>
+                        <td>51227.1381</td>
+                        <td>51227.1381</td>
+                        <td>27817.7765</td>
+                        <td>0.0000</td>
+                        <td><span class="drift-no">NON</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>DAYS_REGISTRATION</strong></td>
+                        <td>52326.9284</td>
+                        <td>52326.9284</td>
+                        <td>28377.7060</td>
+                        <td>0.0000</td>
+                        <td><span class="drift-no">NON</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>DAYS_BIRTH</strong></td>
+                        <td>50922.8017</td>
+                        <td>50922.8017</td>
+                        <td>27993.3422</td>
+                        <td>0.0000</td>
+                        <td><span class="drift-no">NON</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>EMPLOYED_RATIO</strong></td>
+                        <td>0.2851</td>
+                        <td>0.2851</td>
+                        <td>0.1604</td>
+                        <td>0.0000</td>
+                        <td><span class="drift-no">NON</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>ANNUITY_INCOME_RATIO</strong></td>
+                        <td>0.2858</td>
+                        <td>0.2858</td>
+                        <td>0.1615</td>
+                        <td>0.0000</td>
+                        <td><span class="drift-no">NON</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>NONLIVINGAREA_AVG</strong></td>
+                        <td>-0.0176</td>
+                        <td>-0.0176</td>
+                        <td>1.0017</td>
+                        <td>0.0000</td>
+                        <td><span class="drift-no">NON</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>ELEVATORS_MEDI</strong></td>
+                        <td>0.0013</td>
+                        <td>0.0013</td>
+                        <td>1.0093</td>
+                        <td>0.0000</td>
+                        <td><span class="drift-no">NON</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>CODE_GENDER_nan</strong></td>
+                        <td>0.3010</td>
+                        <td>0.3010</td>
+                        <td>0.4588</td>
+                        <td>0.0000</td>
+                        <td><span class="drift-no">NON</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>WALLSMATERIAL_MODE_Panel</strong></td>
+                        <td>0.0115</td>
+                        <td>0.0115</td>
+                        <td>0.9924</td>
+                        <td>0.0000</td>
+                        <td><span class="drift-no">NON</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="interpretation">
+                <h3>Interprétation des résultats</h3>
+                <p><strong>Features avec drift détecté :</strong></p>
+                <ul>
+                    <li><strong>EXT_SOURCE_2</strong> : La distribution a significativement changé entre l'entraînement et la production</li><li><strong>EXT_SOURCE_PROD</strong> : La distribution a significativement changé entre l'entraînement et la production</li><li><strong>AMT_ANNUITY</strong> : La distribution a significativement changé entre l'entraînement et la production</li><li><strong>AMT_CREDIT</strong> : La distribution a significativement changé entre l'entraînement et la production</li>
+                </ul>
+                <br>
+                <p><strong>Impact potentiel :</strong> Ces features étant importantes pour le modèle (notamment les EXT_SOURCE), un drift significatif pourrait affecter la qualité des prédictions. Il est recommandé de :</p>
+                <ul>
+                    <li>Surveiller les métriques de performance du modèle</li>
+                    <li>Investiguer la cause du drift (changement de population, de processus...)</li>
+                    <li>Envisager un ré-entraînement si les performances se dégradent</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>3. Analyse des features clés</h2>
+            <div class="methodology">
+                <h3>Focus sur les EXT_SOURCE</h3>
+                <p>Les variables <strong>EXT_SOURCE</strong> (scores provenant de sources externes) sont les plus discriminantes pour prédire le défaut de paiement. Leur stabilité est donc cruciale.</p>
+                <ul>
+                    <li><strong>EXT_SOURCE_1, 2, 3</strong> : Scores de crédit externes (bureaux de crédit)</li>
+                    <li><strong>EXT_SOURCE_MEAN</strong> : Moyenne des trois scores</li>
+                    <li><strong>EXT_SOURCE_PROD</strong> : Produit des trois scores</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="conclusion">
+            <h2>Conclusion</h2>
+            <p>L'analyse révèle un drift sur <strong>20.0%</strong> des features.</p>
+            <p style="margin-top: 15px; opacity: 0.8;">
+                Le drift global reste acceptable (< 50%). Le modèle peut continuer à être utilisé avec une surveillance accrue.
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>Rapport généré avec Evidently AI | Projet MLOps - Scoring Crédit</p>
+        </div>
+    </div>
+</body>
+</html>
