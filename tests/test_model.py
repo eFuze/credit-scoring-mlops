@@ -57,9 +57,9 @@ class TestCostFunction:
         """Test que FN coûte plus cher que FP."""
         y_true = np.array([0, 1])
 
-        # Un FP
-        cost_fp = cost_from_threshold(y_true, np.array([0.9, 0.1]), 0.5)
-        # Un FN
+        # Un seul FP : y=0 pred=1, y=1 pred=1 → 1 FP, 0 FN
+        cost_fp = cost_from_threshold(y_true, np.array([0.9, 0.9]), 0.5)
+        # Un seul FN : y=0 pred=0, y=1 pred=0 → 0 FP, 1 FN
         cost_fn = cost_from_threshold(y_true, np.array([0.1, 0.1]), 0.5)
 
         assert cost_fn > cost_fp  # FN (10) > FP (1)
