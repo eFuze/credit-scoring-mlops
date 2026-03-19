@@ -3,6 +3,7 @@ import pytest
 import sys
 from pathlib import Path
 from unittest.mock import patch, MagicMock
+from contextlib import asynccontextmanager
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -26,12 +27,22 @@ def mock_model_data():
 def client(mock_model_data):
     """Fixture pour créer un client de test."""
     from fastapi.testclient import TestClient
+    import api.main as api_module
 
-    # Patcher le chargement du modèle
-    with patch.dict("api.main.model_data", mock_model_data):
-        from api.main import app
-        with TestClient(app) as test_client:
-            yield test_client
+    # Remplacer le lifespan pour ne pas charger le modèle depuis le disque
+    @asynccontextmanager
+    async def mock_lifespan(app):
+        api_module.model_data.update(mock_model_data)
+        yield
+        api_module.model_data.clear()
+
+    original_lifespan = api_module.app.router.lifespan_context
+    api_module.app.router.lifespan_context = mock_lifespan
+
+    with TestClient(api_module.app) as test_client:
+        yield test_client
+
+    api_module.app.router.lifespan_context = original_lifespan
 
 
 class TestHealthEndpoint:
